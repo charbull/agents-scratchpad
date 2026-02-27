@@ -1,22 +1,27 @@
 import os
-from pathlib import Path
+import asyncio
 from dotenv import load_dotenv
 import logging
+
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent, BaseAgent
-from google.adk.tools import google_search
+from google.adk.events import Event, EventActions
+from google.adk.runners import Runner, print_event
+from google.genai import types
+from google.adk.tools.google_search_tool import GoogleSearchTool
+from google.adk.utils.context_utils import Aclosing
+from google.adk.sessions import InMemorySessionService
+from google.adk.artifacts import InMemoryArtifactService
+
+
 # 1. Setup Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ResearchAgent")
-
 
 
 # Load environment variables (e.g., GOOGLE_API_KEY) from .env file
 load_dotenv()
 
 MAX_WORKERS = 2
-
-# async def mock_search_tool(query: str) -> str:
-#     return f"Search result for: {query}"
 
 
 # --- STAGE 1: PLANNER ---
@@ -26,11 +31,6 @@ planner = LlmAgent(
     instruction="Break user request into 3 JSON strings. Example: ['A', 'B']",
     output_key="research_tasks"
 )
-
-from google.adk.events import Event, EventActions
-from google.adk.agents.base_agent import BaseAgentState
-
-from google.adk.tools.google_search_tool import GoogleSearchTool
 
 # --- STAGE 2: DYNAMIC ORCHESTRATOR ---
 class DynamicResearchOrchestrator(BaseAgent):
@@ -52,7 +52,6 @@ class DynamicResearchOrchestrator(BaseAgent):
             )
             workers.append(worker)
 
-        from google.adk.utils.context_utils import Aclosing
         fan_out = ParallelAgent(name="ResearchExecution", sub_agents=workers)
 
         # Use Aclosing to ensure the async generator is properly closed
@@ -100,35 +99,17 @@ summarizer = LlmAgent(
     output_key="final_report"
 )
 
-import asyncio
-
-from google.adk.runners import Runner, InMemorySessionService, InMemoryArtifactService, print_event
-
-from google.genai import types
-
-
-
 # --- ASSEMBLY ---
 
 root_agent = SequentialAgent(
-
     name="AutonomousResearcher",
-
     sub_agents=[
-
         planner,
-
         DynamicResearchOrchestrator(name="Orchestrator"),
-
         validator,
-
         summarizer
-
     ]
-
 )
-
-
 
 async def main():
     import sys
@@ -170,10 +151,7 @@ async def main():
     ):
         print_event(event)
 
-
-
 if __name__ == "__main__":
-
     asyncio.run(main())
 
 
