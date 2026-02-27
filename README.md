@@ -1,6 +1,7 @@
 # Research Agent
 
 An autonomous research agent built with the Google Agent Development Kit (ADK).
+Inpsired by https://www.anthropic.com/engineering/multi-agent-research-system
 
 ## Setup
 
